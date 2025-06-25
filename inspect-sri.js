@@ -105,29 +105,31 @@ function validateSRI(url, expectedHash) {
  * Check security headers in HTML
  */
 function checkSecurityHeaders(htmlContent) {
-    const issues = [];
+    const headers = [
+        'Strict-Transport-Security',
+        'Content-Security-Policy',
+        'X-Frame-Options',
+        'X-Content-Type-Options',
+        'Referrer-Policy',
+        'Permissions-Policy'
+    ];
     
-    // Check for CSP
-    if (!htmlContent.includes('Content-Security-Policy')) {
-        issues.push('Missing Content-Security-Policy header');
-    }
+    const present = [];
+    const missing = [];
     
-    // Check for X-Frame-Options
-    if (!htmlContent.includes('X-Frame-Options')) {
-        issues.push('Missing X-Frame-Options header');
-    }
+    headers.forEach(header => {
+        if (htmlContent.includes(header)) {
+            present.push(header);
+        } else {
+            missing.push(header);
+        }
+    });
     
-    // Check for X-Content-Type-Options
-    if (!htmlContent.includes('X-Content-Type-Options')) {
-        issues.push('Missing X-Content-Type-Options header');
-    }
-    
-    // Check for Referrer-Policy
-    if (!htmlContent.includes('Referrer-Policy')) {
-        issues.push('Missing Referrer-Policy header');
-    }
-    
-    return issues;
+    return {
+        present,
+        missing,
+        issues: missing.map(header => `Missing ${header} header`)
+    };
 }
 
 /**
@@ -228,14 +230,25 @@ async function validateProjectSRI() {
     
     // Check security headers
     console.log('🛡️  Security Headers Validation:');
-    const securityIssues = checkSecurityHeaders(htmlContent);
-    if (securityIssues.length === 0) {
-        console.log('  ✅ All security headers present');
-    } else {
-        securityIssues.forEach(issue => {
-            console.log(`  ❌ ${issue}`);
-            issueCount++;
+    const securityCheck = checkSecurityHeaders(htmlContent);
+    
+    if (securityCheck.present.length > 0) {
+        console.log('  ✅ Present headers:');
+        securityCheck.present.forEach(header => {
+            console.log(`     • ${header}`);
         });
+    }
+    
+    if (securityCheck.missing.length > 0) {
+        console.log('  ❌ Missing headers:');
+        securityCheck.missing.forEach(header => {
+            console.log(`     • ${header}`);
+        });
+        issueCount += securityCheck.missing.length;
+    }
+    
+    if (securityCheck.missing.length === 0) {
+        console.log('  🎉 All security headers are present!');
     }
     
     // Summary
